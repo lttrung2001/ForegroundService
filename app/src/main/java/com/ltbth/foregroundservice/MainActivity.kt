@@ -3,11 +3,14 @@ package com.ltbth.foregroundservice
 import android.content.Intent
 import android.media.Image
 import android.os.Bundle
+import android.view.animation.Animation
 import android.view.animation.LinearInterpolator
+import android.view.animation.RotateAnimation
 import android.widget.Button
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import de.hdodenhof.circleimageview.CircleImageView
+import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
     private var isPlay = false
@@ -26,43 +29,40 @@ class MainActivity : AppCompatActivity() {
         circleImageView = findViewById(R.id.song_circle_image)
         val song = Song(TITLE, SINGER, R.drawable.me, R.raw.sweet_but_psycho)
         buttonStart.setOnClickListener {
-            val intent = Intent(this, PlayMusicService::class.java)
-            if (isPlay) {
-                isPlay = false
-                buttonStart.setImageResource(R.drawable.ic_play)
-                stopRotateImage()
-                stopService(intent)
-            } else {
-                isPlay = true
-                buttonStart.setImageResource(R.drawable.ic_pause)
-                startRotateImage()
-                val bundle = Bundle()
-                bundle.putSerializable(SONG, song)
-                intent.putExtras(bundle)
-                startService(intent)
-            }
+            val thread = Thread {
+                val intent = Intent(this, PlayMusicService::class.java)
+                if (isPlay) {
+                    isPlay = false
+                    buttonStart.setImageResource(R.drawable.ic_play)
+
+                    stopRotateImage()
+                    stopService(intent)
+                } else {
+                    isPlay = true
+                    buttonStart.setImageResource(R.drawable.ic_pause)
+
+                    startRotateImage()
+                    val bundle = Bundle()
+                    bundle.putSerializable(SONG, song)
+                    intent.putExtras(bundle)
+                    startService(intent)
+                }
+            }.start()
         }
     }
 
     private fun startRotateImage() {
-        val runnable = object: Runnable {
-            override fun run() {
-                circleImageView.animate()
-                    .rotationBy(360F).withEndAction(this)
-                    .setDuration(10000)
-                    .setInterpolator(LinearInterpolator())
-                    .start()
-            }
-        }
-        circleImageView.animate()
-            .rotationBy(360F).withEndAction(runnable)
-            .setDuration(10000)
-            .setInterpolator(LinearInterpolator())
-            .start()
+        val rotate = RotateAnimation(0F,
+            360F, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f)
+        rotate.duration = 10000
+        rotate.repeatCount = RotateAnimation.INFINITE
+        rotate.interpolator = LinearInterpolator()
+
+        circleImageView.startAnimation(rotate)
     }
 
     private fun stopRotateImage() {
-        circleImageView.animate().cancel()
+        circleImageView.clearAnimation()
     }
 
 
